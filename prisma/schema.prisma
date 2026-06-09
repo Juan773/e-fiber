@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // URL con pooler (pgbouncer) — para queries en Vercel
+  directUrl = env("DIRECT_URL")     // URL directa — solo para migraciones locales
+}
+
+model Country {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique @db.VarChar(100)
+  departments Department[]
+}
+
+model Department {
+  id        Int        @id @default(autoincrement())
+  countryId Int
+  name      String     @db.VarChar(100)
+  country   Country    @relation(fields: [countryId], references: [id])
+  provinces Province[]
+}
+
+model Province {
+  id           Int        @id @default(autoincrement())
+  departmentId Int
+  name         String     @db.VarChar(100)
+  department   Department @relation(fields: [departmentId], references: [id])
+  districts    District[]
+}
+
+model District {
+  id         Int      @id @default(autoincrement())
+  provinceId Int
+  name       String   @db.VarChar(100)
+  province   Province @relation(fields: [provinceId], references: [id])
+}
+
+model Position {
+  id          String     @id @default(uuid())
+  name        String     @db.VarChar(100)
+  description String?    @db.Text
+  createdAt   DateTime   @default(now())
+  employees   Employee[]
+}
+
+model Client {
+  id             String         @id @default(uuid())
+  docType        String         @default("DNI") @db.VarChar(20)
+  docNumber      String         @db.VarChar(20)
+  firstName      String         @db.VarChar(100)
+  lastName       String         @db.VarChar(100)
+  gender         String?        @db.VarChar(20)
+  birthDate      DateTime?
+  maritalStatus  String?        @db.VarChar(20)
+  address        String?        @db.VarChar(255)
+  countryId      Int?
+  departmentId   Int?
+  provinceId     Int?
+  districtId     Int?
+  occupation     String?        @db.VarChar(50)
+  email          String?        @db.VarChar(150)
+  phone          String?        @db.VarChar(20)
+  emergencyPhone String?        @db.VarChar(20)
+  status         String         @default("Activo") @db.VarChar(20)
+  avatarUrl      String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  installations  Installation[]
+  subscriptions  Subscription[]
+  invoices       Invoice[]
+
+  @@unique([docType, docNumber])
+}
+
+model Employee {
+  id            String         @id @default(uuid())
+  docType       String         @default("DNI") @db.VarChar(20)
+  docNumber     String         @unique @db.VarChar(20)
+  firstName     String         @db.VarChar(100)
+  lastName      String         @db.VarChar(100)
+  gender        String?        @db.VarChar(20)
+  birthDate     DateTime?
+  address       String?        @db.VarChar(255)
+  email         String?        @db.VarChar(150)
+  phone         String?        @db.VarChar(20)
+  positionId    String?
+  status        String         @default("Activo") @db.VarChar(20)
+  avatarUrl     String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  position      Position?      @relation(fields: [positionId], references: [id])
+  installations Installation[]
+}
+
+model AssetType {
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  assets      Asset[]
+}
+
+model MeasureUnit {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(100)
+  abbreviation String   @db.VarChar(20)
+  createdAt    DateTime @default(now())
+  assets       Asset[]
+}
+
+model Asset {
+  id            String       @id @default(uuid())
+  name          String       @db.VarChar(150)
+  assetTypeId   String?
+  measureUnitId String?
+  description   String?      @db.Text
+  stock         Int          @default(0)
+  unitPrice     Decimal?     @db.Decimal(10, 2)
+  status        String       @default("Activo") @db.VarChar(20)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  assetType     AssetType?   @relation(fields: [assetTypeId], references: [id])
+  measureUnit   MeasureUnit? @relation(fields: [measureUnitId], references: [id])
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          String         @db.VarChar(100)
+  description   String?        @db.Text
+  speedMbps     Int
+  monthlyPrice  Decimal        @db.Decimal(10, 2)
+  status        String         @default("Activo") @db.VarChar(20)
+  createdAt     DateTime       @default(now())
+  installations Installation[]
+  subscriptions Subscription[]
+}
+
+model Installation {
+  id                  String         @id @default(uuid())
+  clientId            String
+  employeeId          String?
+  planId              String
+  installationAddress String         @db.VarChar(255)
+  countryId           Int?
+  departmentId        Int?
+  provinceId          Int?
+  districtId          Int?
+  scheduledDate       DateTime?
+  completedDate       DateTime?
+  status              String         @default("Pendiente") @db.VarChar(20)
+  notes               String?        @db.Text
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  client              Client         @relation(fields: [clientId], references: [id])
+  employee            Employee?      @relation(fields: [employeeId], references: [id])
+  plan                Plan           @relation(fields: [planId], references: [id])
+  subscriptions       Subscription[]
+}
+
+model Subscription {
+  id             String    @id @default(uuid())
+  clientId       String
+  installationId String
+  planId         String
+  startDate      DateTime
+  endDate        DateTime
+  monthlyPrice   Decimal   @db.Decimal(10, 2)
+  status         String    @default("Activa") @db.VarChar(20)
+  suspendedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  client         Client       @relation(fields: [clientId], references: [id])
+  installation   Installation @relation(fields: [installationId], references: [id])
+  plan           Plan         @relation(fields: [planId], references: [id])
+  extensions     Extension[]
+  invoices       Invoice[]
+  payments       Payment[]
+}
+
+model Extension {
+  id                String       @id @default(uuid())
+  subscriptionId    String
+  previousStartDate DateTime
+  previousEndDate   DateTime
+  newEndDate        DateTime
+  reason            String?      @db.Text
+  createdAt         DateTime     @default(now())
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id])
+}
+
+model Payment {
+  id                 String       @id @default(uuid())
+  subscriptionId     String
+  month              Int
+  year               Int
+  amount             Decimal      @db.Decimal(10, 2)
+  lateFee            Decimal      @default(0) @db.Decimal(10, 2)
+  discount           Decimal      @default(0) @db.Decimal(10, 2)
+  status             String       @default("Pendiente") @db.VarChar(20)
+  dueDate            DateTime
+  paymentDate        DateTime?
+  paymentMethod      String?      @db.VarChar(50)
+  notes              String?      @db.Text
+  isProrated         Boolean      @default(false)
+  notified           Boolean      @default(false)
+  notificationStage  Int          @default(0)
+  lastNotifiedAt     DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  subscription       Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@unique([subscriptionId, month, year])
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  type           String        @db.VarChar(10)
+  series         String        @db.VarChar(5)
+  sequential     Int
+  clientId       String
+  subscriptionId String?
+  items          Json
+  subtotal       Decimal       @db.Decimal(10, 2)
+  igv            Decimal       @db.Decimal(10, 2)
+  total          Decimal       @db.Decimal(10, 2)
+  status         String        @default("Borrador") @db.VarChar(20)
+  nubefactId     String?       @db.VarChar(100)
+  pdfUrl         String?       @db.Text
+  xmlUrl         String?       @db.Text
+  issueDate      DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  client         Client        @relation(fields: [clientId], references: [id])
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@unique([type, series, sequential])
+}
