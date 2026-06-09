@@ -27,7 +27,7 @@ export default function ListExtensionPage() {
     const [prRes, subRes] = await Promise.all([fetch("/api/extensions"), fetch("/api/subscriptions")]);
     setItems(await prRes.json());
     const allSubs: SubActiva[] = await subRes.json();
-    setSubs(allSubs.filter((s: { status?: string }) => s.status === "Activa"));
+    setSubs(allSubs.filter((s) => s.status === "Activa"));
     setLoading(false);
   }, []);
 
