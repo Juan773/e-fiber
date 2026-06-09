@@ -12,7 +12,7 @@ interface Prorroga {
   reason?: string; createdAt: string;
   subscription?: { client?: { firstName: string; lastName: string } };
 }
-interface SubActiva { id: string; endDate: string; client?: { firstName: string; lastName: string }; }
+interface SubActiva { id: string; endDate: string; status?: string; client?: { firstName: string; lastName: string }; }
 
 export default function ListExtensionPage() {
   const [items, setItems] = useState<Prorroga[]>([]);
