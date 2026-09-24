@@ -151,12 +151,37 @@ model Installation {
   completedDate       DateTime?
   status              String         @default("Pendiente") @db.VarChar(20)
   notes               String?        @db.Text
+  // Contrato de prestación de servicios
+  contractNumber      String?        @db.VarChar(20)
+  contractDate        DateTime?
+  usageType           String?        @db.VarChar(30)
+  contractTermMonths  Int?           @default(6)
+  // Acta de servicio técnico
+  technicalActNumber  String?        @db.VarChar(20)
+  ipAddress           String?        @db.VarChar(45)
+  materials           String?        @db.Text
+  receivedBy          String?        @db.VarChar(150)
+  receivedByRelation  String?        @db.VarChar(50)
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   client              Client         @relation(fields: [clientId], references: [id])
   employee            Employee?      @relation(fields: [employeeId], references: [id])
   plan                Plan           @relation(fields: [planId], references: [id])
   subscriptions       Subscription[]
+  equipment           InstallationEquipment[]
+}
+
+// Equipos en comodato asociados a la instalación (ONT, router, otros)
+model InstallationEquipment {
+  id             String       @id @default(uuid())
+  installationId String
+  type           String       @db.VarChar(20)
+  brand          String?      @db.VarChar(50)
+  model          String?      @db.VarChar(50)
+  serialNumber   String?      @db.VarChar(50)
+  action         String       @default("Instalado") @db.VarChar(20)
+  createdAt      DateTime     @default(now())
+  installation   Installation @relation(fields: [installationId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {

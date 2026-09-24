@@ -11,11 +11,22 @@ import Modal from "@/components/shared/Modal";
 interface Cliente { id: string; firstName: string; lastName: string; }
 interface Empleado { id: string; firstName: string; lastName: string; }
 interface Plan { id: string; name: string; speedMbps: number; }
+interface Equipo {
+  type: string; brand?: string; model?: string; serialNumber?: string; action: string;
+}
 interface Instalacion {
   id: string; clientId: string; employeeId?: string; planId: string;
   installationAddress: string; scheduledDate?: string; status: string; notes?: string;
-  client?: Cliente; employee?: Empleado; plan?: Plan;
+  contractNumber?: string; contractDate?: string; usageType?: string; contractTermMonths?: number;
+  technicalActNumber?: string; ipAddress?: string; materials?: string;
+  receivedBy?: string; receivedByRelation?: string;
+  client?: Cliente; employee?: Empleado; plan?: Plan; equipment?: Equipo[];
 }
+
+const TIPOS_EQUIPO = ["ONT", "Router", "Otro"];
+const ACCIONES_EQUIPO = ["Instalado", "Retirado", "Cambiado"];
+const TIPOS_USO = ["Familiar", "Comercial", "Familiar-Comercial"];
+const toDateInput = (d?: string) => (d ? d.slice(0, 10) : "");
 
 interface ClienteForm {
   docType: string; docNumber: string;
@@ -45,6 +56,9 @@ export default function ListInstallationPage() {
   // Cliente form (solo para nueva instalación)
   const [clienteForm, setClienteForm] = useState<ClienteForm>(DEFAULT_CLIENTE);
 
+  // Equipos en comodato (acta técnica)
+  const [equipos, setEquipos] = useState<Equipo[]>([]);
+
   const [saving, setSaving] = useState(false);
 
   const fetchAll = useCallback(async () => {
@@ -71,6 +85,9 @@ export default function ListInstallationPage() {
     const instalacionData = {
       ...form,
       scheduledDate: form.scheduledDate ? new Date(form.scheduledDate) : undefined,
+      contractDate: form.contractDate ? new Date(form.contractDate) : undefined,
+      contractTermMonths: form.contractTermMonths ? Number(form.contractTermMonths) : undefined,
+      equipment: equipos.filter((eq) => eq.brand || eq.model || eq.serialNumber),
     };
 
     if (editing) {
@@ -96,6 +113,8 @@ export default function ListInstallationPage() {
 
   const set = (key: keyof Instalacion, value: unknown) => setForm((f) => ({ ...f, [key]: value }));
   const setC = (key: keyof ClienteForm, value: string) => setClienteForm((f) => ({ ...f, [key]: value }));
+  const setEq = (idx: number, key: keyof Equipo, value: string) =>
+    setEquipos((list) => list.map((eq, i) => (i === idx ? { ...eq, [key]: value } : eq)));
 
   const columns: Column<Instalacion>[] = [
     {
@@ -121,7 +140,14 @@ export default function ListInstallationPage() {
         <div className="flex gap-2">
           <button className="btn-edit" onClick={() => {
             setEditing(row);
-            setForm({ clientId: row.clientId, employeeId: row.employeeId, planId: row.planId, installationAddress: row.installationAddress, status: row.status, notes: row.notes, scheduledDate: row.scheduledDate });
+            setForm({
+              clientId: row.clientId, employeeId: row.employeeId, planId: row.planId, installationAddress: row.installationAddress,
+              status: row.status, notes: row.notes, scheduledDate: toDateInput(row.scheduledDate),
+              contractNumber: row.contractNumber, contractDate: toDateInput(row.contractDate), usageType: row.usageType,
+              contractTermMonths: row.contractTermMonths, technicalActNumber: row.technicalActNumber, ipAddress: row.ipAddress,
+              materials: row.materials, receivedBy: row.receivedBy, receivedByRelation: row.receivedByRelation,
+            });
+            setEquipos(row.equipment ?? []);
             setModalOpen(true);
           }}><Pencil size={14} /></button>
           <button className="btn-delete" onClick={async () => {
@@ -144,8 +170,9 @@ export default function ListInstallationPage() {
         action={
           <button className="btn-primary" onClick={() => {
             setEditing(null);
-            setForm({ status: "Pendiente" });
+            setForm({ status: "Pendiente", contractTermMonths: 6 });
             setClienteForm(DEFAULT_CLIENTE);
+            setEquipos([]);
             setModalOpen(true);
           }}>
             <Plus size={16} /> Nueva Instalación
@@ -246,6 +273,98 @@ export default function ListInstallationPage() {
               </select>
             </div>
           </div>
+
+          {/* ──── Contrato ──── */}
+          <p className="form-section-title">Contrato</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative">
+              <label className="form-label">Nro. Contrato</label>
+              <input className="form-input" value={form.contractNumber ?? ""} onChange={(e) => set("contractNumber", e.target.value)} placeholder="000245" maxLength={20} />
+            </div>
+            <div className="relative">
+              <label className="form-label">Fecha de Contrato</label>
+              <input type="date" className="form-input" value={form.contractDate ?? ""} onChange={(e) => set("contractDate", e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative">
+              <label className="form-label">Tipo de Uso</label>
+              <select className="form-select" value={form.usageType ?? ""} onChange={(e) => set("usageType", e.target.value || undefined)}>
+                <option value="">Seleccionar</option>
+                {TIPOS_USO.map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="relative">
+              <label className="form-label">Plazo Forzoso (meses)</label>
+              <input type="number" min={0} className="form-input" value={form.contractTermMonths ?? ""} onChange={(e) => set("contractTermMonths", e.target.value)} placeholder="6" />
+            </div>
+          </div>
+
+          {/* ──── Acta de Servicio Técnico ──── */}
+          <p className="form-section-title">Acta de Servicio Técnico</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative">
+              <label className="form-label">Nro. Acta</label>
+              <input className="form-input" value={form.technicalActNumber ?? ""} onChange={(e) => set("technicalActNumber", e.target.value)} placeholder="000415" maxLength={20} />
+            </div>
+            <div className="relative">
+              <label className="form-label">IP Asignada</label>
+              <input className="form-input" value={form.ipAddress ?? ""} onChange={(e) => set("ipAddress", e.target.value)} placeholder="192.168.1.10" maxLength={45} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative">
+              <label className="form-label">Recepciona</label>
+              <input className="form-input" value={form.receivedBy ?? ""} onChange={(e) => set("receivedBy", e.target.value)} placeholder="Nombre de quien recibe" />
+            </div>
+            <div className="relative">
+              <label className="form-label">Relación con el Cliente</label>
+              <input className="form-input" value={form.receivedByRelation ?? ""} onChange={(e) => set("receivedByRelation", e.target.value)} placeholder="Titular, familiar..." />
+            </div>
+          </div>
+          <div className="relative">
+            <label className="form-label">Materiales Instalados</label>
+            <textarea className="form-input min-h-[60px] resize-none" value={form.materials ?? ""} onChange={(e) => set("materials", e.target.value)} placeholder="Cable drop 80m, conectores, roseta..." />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <p className="form-section-title">Equipos (comodato)</p>
+            <button type="button" className="btn-secondary text-xs" onClick={() => setEquipos((l) => [...l, { type: "Router", action: "Instalado" }])}>
+              <Plus size={14} /> Agregar equipo
+            </button>
+          </div>
+          {equipos.map((eq, idx) => (
+            <div key={idx} className="grid grid-cols-2 gap-3 rounded-lg border border-gray-200 dark:border-slate-700 p-3">
+              <div className="relative">
+                <label className="form-label">Tipo</label>
+                <select className="form-select" value={eq.type} onChange={(e) => setEq(idx, "type", e.target.value)}>
+                  {TIPOS_EQUIPO.map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="relative">
+                <label className="form-label">Movimiento</label>
+                <select className="form-select" value={eq.action} onChange={(e) => setEq(idx, "action", e.target.value)}>
+                  {ACCIONES_EQUIPO.map((a) => <option key={a}>{a}</option>)}
+                </select>
+              </div>
+              <div className="relative">
+                <label className="form-label">Marca</label>
+                <input className="form-input" value={eq.brand ?? ""} onChange={(e) => setEq(idx, "brand", e.target.value)} placeholder="Huawei" />
+              </div>
+              <div className="relative">
+                <label className="form-label">Modelo</label>
+                <input className="form-input" value={eq.model ?? ""} onChange={(e) => setEq(idx, "model", e.target.value)} placeholder="Archer C50" />
+              </div>
+              <div className="col-span-2 flex gap-2 items-center">
+                <div className="relative flex-1">
+                  <label className="form-label">Nro. Serie</label>
+                  <input className="form-input" value={eq.serialNumber ?? ""} onChange={(e) => setEq(idx, "serialNumber", e.target.value)} placeholder="3MROU24C28000259" />
+                </div>
+                <button type="button" className="btn-delete" onClick={() => setEquipos((l) => l.filter((_, i) => i !== idx))}><Trash2 size={14} /></button>
+              </div>
+            </div>
+          ))}
+
           <div className="relative">
             <label className="form-label">Observaciones</label>
             <textarea className="form-input min-h-[70px] resize-none" value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} placeholder="Equipos necesarios, accesos, notas..." />

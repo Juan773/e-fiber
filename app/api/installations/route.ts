@@ -7,6 +7,7 @@ export async function GET() {
       client: { select: { firstName: true, lastName: true } },
       employee: { select: { firstName: true, lastName: true } },
       plan: { select: { name: true, speedMbps: true } },
+      equipment: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -15,7 +16,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { client: clienteData, ...instalacionData } = body;
+  const { client: clienteData, equipment = [], ...rest } = body;
+  const instalacionData = { ...rest, equipment: { create: equipment } };
 
   // Si viene con datos de client, crear o reutilizar client en la misma transacción
   if (clienteData) {

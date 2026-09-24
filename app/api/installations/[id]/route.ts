@@ -74,7 +74,17 @@ async function generarPagos(
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const body = await req.json();
+  const { equipment, ...fields } = await req.json();
+  // Si llegan equipos, se reemplaza la lista completa
+  const body = equipment
+    ? {
+        ...fields,
+        equipment: {
+          deleteMany: {},
+          create: equipment.map(({ id: _id, installationId: _iid, createdAt: _c, ...e }: Record<string, unknown>) => e),
+        },
+      }
+    : fields;
 
   const instalacionActual = await prisma.installation.findUnique({
     where: { id: params.id },
