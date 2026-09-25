@@ -76,11 +76,9 @@ async function main() {
 
   // Planes
   const planesData = [
-    { id: "plan_50", name: "Plan Básico 50MB", speedMbps: 50, monthlyPrice: 39.90, description: "Ideal para uso básico en el hogar" },
-    { id: "plan_100", name: "Plan Estándar 100MB", speedMbps: 100, monthlyPrice: 59.90, description: "Perfecto para familias" },
-    { id: "plan_200", name: "Plan Premium 200MB", speedMbps: 200, monthlyPrice: 89.90, description: "Para hogares con alto consumo" },
-    { id: "plan_500", name: "Plan Ultra 500MB", speedMbps: 500, monthlyPrice: 129.90, description: "Para gamers y streamers" },
-    { id: "plan_1000", name: "Plan Empresarial 1GB", speedMbps: 1000, monthlyPrice: 199.90, description: "Para empresas y negocios" },
+    { id: "plan_50", name: "Plan 100", speedMbps: 100, monthlyPrice: 50, description: "Internet estable para navegación y redes sociales" },
+    { id: "plan_300", name: "Plan 300", speedMbps: 300, monthlyPrice: 70, description: "Streaming HD/4K, videollamadas y juegos en línea" },
+    { id: "plan_400", name: "Plan 400", speedMbps: 400, monthlyPrice: 100, description: "Máximo rendimiento para hogares con muchos dispositivos" },
   ];
   for (const p of planesData) {
     await prisma.plan.upsert({ where: { id: p.id }, update: {}, create: p });
